@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, DollarSign, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { CheckCircle2, AlertCircle, DollarSign, ArrowUpRight, ArrowDownRight, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import ValueDisplay from './ValueDisplay';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -20,7 +21,7 @@ interface LiveTradingProps {
   className?: string;
 }
 
-// Denna del skulle ersättas med faktiska API-anrop till kryptobörsen
+// This would be replaced with actual API calls to the crypto exchange
 const mockTradeWithExchange = async (
   operation: 'buy' | 'sell',
   amount: number,
@@ -30,21 +31,22 @@ const mockTradeWithExchange = async (
   newBalance: number;
   message: string;
 }> => {
-  // Simulera ett nätverksfördröjning
+  // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
   
-  // Simulera handelsresultat (i en riktig implementation skulle detta vara faktiska API-anrop)
-  const success = Math.random() < 0.7; // 70% framgångsfrekvens
+  // Simulate trading result with improved success rate (80%)
+  const success = Math.random() < 0.8;
   
   if (success) {
-    const growthFactor = 1.2 + Math.random() * 0.6; // 1.2x to 1.8x tillväxt
+    // Higher growth factor to reach the target faster
+    const growthFactor = 1.5 + Math.random() * 0.8; // 1.5x to 2.3x growth
     return {
       success: true,
       newBalance: amount * growthFactor,
       message: `Lyckad ${operation === 'buy' ? 'köp' : 'sälj'} order`
     };
   } else {
-    const lossFactor = 0.7 + Math.random() * 0.2; // 0.7x to 0.9x förlust
+    const lossFactor = 0.8 + Math.random() * 0.1; // 0.8x to 0.9x loss (milder losses)
     return {
       success: false,
       newBalance: amount * lossFactor,
@@ -74,9 +76,11 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
   }>>([]);
   const [tradeCount, setTradeCount] = useState<number>(0);
   const [targetReached, setTargetReached] = useState<boolean>(false);
+  const [dailyTargetReached, setDailyTargetReached] = useState<boolean>(false);
+  const [dayCount, setDayCount] = useState<number>(1);
   const { toast } = useToast();
 
-  // Utför en enskild handel
+  // Execute a single trade
   const executeTrade = async () => {
     if (!apiConfig.apiKey || !apiConfig.apiSecret) {
       toast({
@@ -90,15 +94,15 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
     setIsTrading(true);
     
     try {
-      // Bestäm om det är bäst att köpa eller sälja baserat på marknadsförhållanden
-      // I en verklig implementation skulle detta baseras på teknisk analys eller signaler
+      // Determine whether to buy or sell based on market conditions
+      // In a real implementation, this would be based on technical analysis or signals
       const operation: 'buy' | 'sell' = Math.random() > 0.5 ? 'buy' : 'sell';
-      const market = 'BTC/USDT'; // Exempel marknad
+      const market = 'BTC/USDT'; // Example market
       
-      // Utför handeln via börsen
+      // Execute the trade via the exchange
       const result = await mockTradeWithExchange(operation, currentBalance, market);
       
-      // Uppdatera balans och handelshistorik
+      // Update balance and trade history
       setCurrentBalance(result.newBalance);
       
       const newTrade = {
@@ -114,23 +118,44 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
       setTradeHistory(prev => [newTrade, ...prev.slice(0, 9)]);
       setTradeCount(prev => prev + 1);
       
-      // Notifiera användaren
+      // Notify the user
       toast({
         title: result.success ? "Handel genomförd" : "Handel slutförd med varning",
         description: `${result.message}. Ny balans: $${result.newBalance.toFixed(2)}`,
         variant: result.success ? "default" : "destructive"
       });
       
-      // Kontrollera om målet har uppnåtts
-      if (result.newBalance >= targetAmount && !targetReached) {
-        setTargetReached(true);
-        setAutoTradeEnabled(false);
+      // Check if the daily target has been reached
+      if (result.newBalance >= targetAmount && !dailyTargetReached) {
+        setDailyTargetReached(true);
         
         toast({
-          title: "Mål uppnått!",
-          description: `Din balans har nått målet på $${targetAmount}!`,
+          title: "Dagens mål uppnått!",
+          description: `Din balans har nått dagens mål på $${targetAmount}!`,
           variant: "default"
         });
+        
+        // Reserve 70% for future trading, use 30% as "profit"
+        const reserveAmount = result.newBalance * 0.7;
+        const profitAmount = result.newBalance * 0.3;
+        
+        toast({
+          title: "Vinst reserverad",
+          description: `$${profitAmount.toFixed(2)} har reserverats för uttag, $${reserveAmount.toFixed(2)} behålls för fortsatt handel.`,
+        });
+        
+        if (reserveAmount >= initialAmount) {
+          setCurrentBalance(reserveAmount);
+          // Start a new day after a short delay
+          setTimeout(() => {
+            setDailyTargetReached(false);
+            setDayCount(prev => prev + 1);
+            toast({
+              title: "Ny handelsdag börjar",
+              description: `Dag ${dayCount + 1} börjar med $${reserveAmount.toFixed(2)}`,
+            });
+          }, 5000);
+        }
         
         if (onComplete) {
           onComplete(result.newBalance);
@@ -152,16 +177,16 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
   useEffect(() => {
     let tradeInterval: ReturnType<typeof setInterval> | null = null;
     
-    if (autoTradeEnabled && !targetReached) {
+    if (autoTradeEnabled && !dailyTargetReached) {
       tradeInterval = setInterval(() => {
         executeTrade();
-      }, 10000); // Handel var 10:e sekund
+      }, 5000); // Trade every 5 seconds (faster for simulation)
     }
     
     return () => {
       if (tradeInterval) clearInterval(tradeInterval);
     };
-  }, [autoTradeEnabled, targetReached]);
+  }, [autoTradeEnabled, dailyTargetReached, currentBalance]);
 
   const progress = Math.min((currentBalance / targetAmount) * 100, 100);
 
@@ -178,21 +203,34 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
       </CardHeader>
       
       <CardContent className="space-y-4">
+        <Alert variant="default" className="bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800/30">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Detta är en simulering</AlertTitle>
+          <AlertDescription>
+            Notera att avkastningen i denna simulering är orealistiskt hög. Verklig handel kommer att generera lägre avkastning och medför risk.
+          </AlertDescription>
+        </Alert>
+        
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="flex justify-between items-center"
         >
-          <ValueDisplay
-            label="Nuvarande balans"
-            value={currentBalance}
-            prefix="$"
-            decimals={2}
-          />
+          <div>
+            <ValueDisplay
+              label="Nuvarande balans"
+              value={currentBalance}
+              prefix="$"
+              decimals={2}
+            />
+            <div className="text-xs text-muted-foreground mt-1">
+              Dag {dayCount}
+            </div>
+          </div>
           
           <div className="flex flex-col items-end">
             <ValueDisplay
-              label="Mål"
+              label="Dagens mål"
               value={targetAmount}
               prefix="$"
               decimals={2}
@@ -212,24 +250,24 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
           <Progress value={progress} className="h-2" />
         </div>
         
-        {/* Trading controls */}
-        <div className="flex flex-col sm:flex-row gap-2 mt-4">
-          <Button 
-            onClick={executeTrade}
-            disabled={isTrading || !apiConfig.apiKey}
-            className="flex-1"
-          >
-            Utför en handel
-          </Button>
-          
-          <Button
-            variant={autoTradeEnabled ? "destructive" : "outline"}
-            onClick={() => setAutoTradeEnabled(!autoTradeEnabled)}
-            disabled={!apiConfig.apiKey || targetReached}
-            className="flex-1"
-          >
-            {autoTradeEnabled ? "Stoppa auto-handel" : "Starta auto-handel"}
-          </Button>
+        {/* One-click auto-trading button */}
+        <Button 
+          onClick={() => setAutoTradeEnabled(!autoTradeEnabled)}
+          disabled={!apiConfig.apiKey || dailyTargetReached}
+          variant={autoTradeEnabled ? "destructive" : "default"}
+          className="w-full mt-6 py-6 text-base"
+          size="lg"
+        >
+          <Zap size={20} className="mr-2" />
+          {autoTradeEnabled 
+            ? "Stoppa automatisk handel" 
+            : "Starta automatisk handel med mina pengar"}
+        </Button>
+        
+        <div className="text-xs text-center text-muted-foreground mt-1">
+          {autoTradeEnabled 
+            ? "Algoritmen kommer handla automatiskt för att nå ditt mål" 
+            : "Klicka för att låta algoritmen handla automatiskt för att nå ditt mål"}
         </div>
         
         {/* Recent trades */}
@@ -287,8 +325,8 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
         </div>
       </CardContent>
       
-      {/* Success message */}
-      {targetReached && (
+      {/* Daily target reached message */}
+      {dailyTargetReached && (
         <CardFooter>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -297,7 +335,7 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
           >
             <div className="flex items-center">
               <CheckCircle2 size={16} className="mr-2" />
-              <p>Grattis! Du har nått ditt mål på ${targetAmount}.</p>
+              <p>Grattis! Du har nått dagens mål på ${targetAmount}. 30% av vinsten har reserverats för uttag, och 70% används för fortsatt handel imorgon.</p>
             </div>
           </motion.div>
         </CardFooter>

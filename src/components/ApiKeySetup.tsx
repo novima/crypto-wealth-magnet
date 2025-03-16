@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, CheckCircle, Key, Shield } from 'lucide-react';
 
 interface ApiKeySetupProps {
@@ -47,7 +48,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
       
       toast({
         title: "API-nycklar sparade",
-        description: "Din anslutning till börsen har konfigurerats.",
+        description: "Din anslutning till börsen har konfigurerats. Du kan nu starta automatisk handel.",
       });
       
       onApiKeySaved({ exchange, apiKey, apiSecret });
@@ -67,13 +68,25 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Key size={20} />
-          API-konfiguration
+          Anslut din kryptoplånbok
         </CardTitle>
         <CardDescription>
-          Anslut till en kryptobörs för att handla med riktiga pengar
+          Koppla din kryptoplånbok för att starta automatisk handel
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <Alert className="bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30">
+          <div className="flex items-start gap-2">
+            <CheckCircle size={18} className="shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm">Simpelt och automatiskt</p>
+              <p className="text-xs mt-1">
+                Koppla din plånbok och låt appen automatiskt handla för att nå ditt mål på $1000 per dag.
+              </p>
+            </div>
+          </div>
+        </Alert>
+        
         <div className="space-y-2">
           <label className="text-sm font-medium">Välj börs</label>
           <Select value={exchange} onValueChange={setExchange}>
@@ -112,7 +125,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
           <AlertCircle size={18} className="shrink-0 mt-0.5" />
           <div>
             <p className="font-medium">Viktigt om säkerhet</p>
-            <p className="mt-1">För att skydda dina tillgångar, skapa API-nycklar med begränsade behörigheter och aktivera IP-begränsning på börsen.</p>
+            <p className="mt-1">För att skydda dina tillgångar, skapa API-nycklar med begränsade behörigheter (endast handla, inte uttag) och aktivera IP-begränsning på börsen.</p>
           </div>
         </div>
       </CardContent>
@@ -122,7 +135,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
           disabled={isLoading} 
           className="w-full"
         >
-          {isLoading ? "Verifierar..." : "Spara och anslut"}
+          {isLoading ? "Verifierar..." : "Anslut plånbok och starta"}
         </Button>
       </CardFooter>
     </Card>
