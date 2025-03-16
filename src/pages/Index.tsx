@@ -15,6 +15,9 @@ import ProgressRing from '@/components/ProgressRing';
 import TransactionCard from '@/components/TransactionCard';
 import TradingSimulation from '@/components/TradingSimulation';
 import StatCard from '@/components/StatCard';
+import ApiKeySetup from '@/components/ApiKeySetup';
+import LiveTrading from '@/components/LiveTrading';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Sample data
 const sampleTransactions = [
@@ -53,8 +56,25 @@ const Index = () => {
   const [profitPercentage, setProfitPercentage] = useState(0);
   const [transactions, setTransactions] = useState(sampleTransactions);
   const [progress, setProgress] = useState(accountBalance / 1000);
+  const [apiConfig, setApiConfig] = useState<{
+    exchange: string;
+    apiKey: string;
+    apiSecret: string;
+  } | null>(null);
   
   const targetAmount = 1000;
+  
+  // Check if we have saved API keys
+  useEffect(() => {
+    const savedKeys = localStorage.getItem('tradingApiKeys');
+    if (savedKeys) {
+      try {
+        setApiConfig(JSON.parse(savedKeys));
+      } catch (e) {
+        console.error('Failed to parse saved API keys');
+      }
+    }
+  }, []);
   
   const handleSimulationComplete = (finalAmount: number) => {
     setAccountBalance(finalAmount);
@@ -62,6 +82,10 @@ const Index = () => {
     setDailyProfit(newProfit);
     setProfitPercentage((newProfit / 10) * 100);
     setProgress(finalAmount / targetAmount);
+  };
+  
+  const handleApiKeySaved = (keys: { exchange: string; apiKey: string; apiSecret: string }) => {
+    setApiConfig(keys);
   };
   
   // Container animation variants
@@ -105,7 +129,7 @@ const Index = () => {
             variants={itemVariants}
             className="text-muted-foreground"
           >
-            Monitor your trading performance
+            Övervaka din handelsprestation
           </motion.p>
         </motion.div>
         
@@ -118,19 +142,19 @@ const Index = () => {
         >
           <motion.div variants={itemVariants}>
             <StatCard
-              title="Account Balance"
+              title="Kontobalans"
               value={`$${accountBalance.toLocaleString(undefined, { 
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
               })}`}
               icon={DollarSign}
-              description="Current trading capital"
+              description="Nuvarande handelskapital"
             />
           </motion.div>
           
           <motion.div variants={itemVariants}>
             <StatCard
-              title="Daily Profit"
+              title="Daglig vinst"
               value={`$${dailyProfit.toLocaleString(undefined, { 
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
@@ -146,10 +170,10 @@ const Index = () => {
           
           <motion.div variants={itemVariants}>
             <StatCard
-              title="ROI"
+              title="Avkastning"
               value={`${profitPercentage.toFixed(2)}%`}
               icon={Percent}
-              description="Return on investment"
+              description="Avkastning på investering"
               trend={
                 profitPercentage !== 0 
                   ? { value: profitPercentage, isPositive: profitPercentage > 0 } 
@@ -168,12 +192,34 @@ const Index = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <TradingSimulation 
-                initialAmount={10} 
-                targetAmount={1000}
-                onComplete={handleSimulationComplete}
-                className="h-full"
-              />
+              <Tabs defaultValue={apiConfig ? "live" : "simulation"} className="w-full">
+                <TabsList className="w-full grid grid-cols-2 mb-4">
+                  <TabsTrigger value="simulation">Simulering</TabsTrigger>
+                  <TabsTrigger value="live">Riktiga pengar</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="simulation" className="mt-0">
+                  <TradingSimulation 
+                    initialAmount={10} 
+                    targetAmount={1000}
+                    onComplete={handleSimulationComplete}
+                    className="h-full"
+                  />
+                </TabsContent>
+                
+                <TabsContent value="live" className="mt-0">
+                  {!apiConfig ? (
+                    <ApiKeySetup onApiKeySaved={handleApiKeySaved} />
+                  ) : (
+                    <LiveTrading 
+                      apiConfig={apiConfig}
+                      initialAmount={10}
+                      targetAmount={1000}
+                      onComplete={handleSimulationComplete}
+                    />
+                  )}
+                </TabsContent>
+              </Tabs>
             </motion.div>
           </div>
           
