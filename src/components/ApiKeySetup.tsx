@@ -33,13 +33,13 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
     setIsLoading(true);
     
     try {
-      // In a real app, we would validate these keys with the exchange's API
-      // For now, we just simulate a successful connection
+      // I en verklig app skulle vi validera dessa nycklar med börsens API
+      // För nu simulerar vi en lyckad anslutning
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Save to localStorage for demo purposes only
-      // In production, these should NEVER be stored in localStorage
-      // and instead should be handled securely on a backend
+      // Spara till localStorage för demo-ändamål
+      // I produktion bör dessa ALDRIG lagras i localStorage
+      // och istället hanteras säkert på en backend
       localStorage.setItem('tradingApiKeys', JSON.stringify({
         exchange,
         apiKey,
@@ -48,7 +48,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
       
       toast({
         title: "API-nycklar sparade",
-        description: "Din anslutning till börsen har konfigurerats. Du kan nu starta automatisk handel.",
+        description: "Din anslutning till börsen har konfigurerats. Automatisk handel startas nu.",
       });
       
       onApiKeySaved({ exchange, apiKey, apiSecret });
