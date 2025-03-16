@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, CheckCircle, Key, Shield } from 'lucide-react';
+import { AlertCircle, CheckCircle, Key, Shield, Rocket } from 'lucide-react';
 
 interface ApiKeySetupProps {
   onApiKeySaved: (keys: { exchange: string; apiKey: string; apiSecret: string }) => void;
@@ -67,11 +67,11 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Key size={20} />
-          Anslut din kryptoplånbok
+          <Rocket size={20} />
+          Snabb värdestegring från 10$ till 1000$
         </CardTitle>
         <CardDescription>
-          Koppla din kryptoplånbok för att starta automatisk handel
+          Koppla din kryptoplånbok för att omvandla 10$ till 1000$ genom automatisk handel
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -79,9 +79,9 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
           <div className="flex items-start gap-2">
             <CheckCircle size={18} className="shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm">Simpelt och automatiskt</p>
+              <p className="text-sm font-medium">Automatisk värdeökning</p>
               <p className="text-xs mt-1">
-                Koppla din plånbok och låt appen automatiskt handla för att nå ditt mål på $1000 per dag.
+                Genom att identifiera snabba handelsmöjligheter kan algoritmen omvandla 10$ till 1000$ genom flera på varandra följande trades (10$ → 20$ → 40$ → 80$ → osv).
               </p>
             </div>
           </div>
@@ -135,7 +135,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
           disabled={isLoading} 
           className="w-full"
         >
-          {isLoading ? "Verifierar..." : "Anslut plånbok och starta"}
+          {isLoading ? "Verifierar..." : "Anslut plånbok och starta automatisk värdeökning"}
         </Button>
       </CardFooter>
     </Card>
