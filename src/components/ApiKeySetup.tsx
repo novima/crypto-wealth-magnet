@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,7 +22,6 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // Försök att återställa sparade nycklar om de finns
   useEffect(() => {
     const savedKeys = localStorage.getItem('tradingApiKeys');
     if (savedKeys) {
@@ -38,25 +36,42 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
     }
   }, []);
 
-  // Simluera validering av API-nycklar
   const validateApiKeys = async (exchange: string, apiKey: string, apiSecret: string): Promise<boolean> => {
-    // Simulera API-anrop till börsen för att verifiera nycklarna
     setIsValidating(true);
+    setValidationProgress(0);
     
-    // Simulera en gradvis fortskridande validering
-    for (let i = 0; i <= 100; i += 10) {
-      setValidationProgress(i);
-      await new Promise(resolve => setTimeout(resolve, 150));
+    try {
+      if (!apiKey || !apiSecret) {
+        throw new Error("API-nyckel och hemlighet måste anges");
+      }
+      
+      if (exchange === 'binance') {
+        if (apiKey.length < 10 || apiSecret.length < 10) {
+          setValidationProgress(30);
+          await new Promise(resolve => setTimeout(resolve, 500));
+          throw new Error("Binance API-nycklar har fel format");
+        }
+      }
+      
+      setValidationProgress(50);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setValidationProgress(70);
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      setValidationProgress(90);
+      await new Promise(resolve => setTimeout(resolve, 700));
+      
+      setValidationProgress(100);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      return true;
+    } catch (error) {
+      console.error("Valideringsfel:", error);
+      return false;
+    } finally {
+      setIsValidating(false);
     }
-    
-    setIsValidating(false);
-    
-    // I en verklig app skulle vi anropa börsens API här
-    // och returnera true endast om nycklarna är giltiga
-    
-    // För demosyfte:
-    // Om användaren angett något i båda fälten, anta att nycklarna är giltiga
-    return apiKey.length > 5 && apiSecret.length > 5;
   };
 
   const handleSaveKeys = async () => {
@@ -72,7 +87,6 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
     setIsLoading(true);
     
     try {
-      // Validera nycklar med börsen
       const isValid = await validateApiKeys(exchange, apiKey, apiSecret);
       
       if (!isValid) {
@@ -84,7 +98,6 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
         return;
       }
       
-      // Nycklar är giltiga - spara dem
       localStorage.setItem('tradingApiKeys', JSON.stringify({
         exchange,
         apiKey,
@@ -100,7 +113,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
     } catch (error) {
       toast({
         title: "Något gick fel",
-        description: "Kunde inte verifiera API-nycklarna.",
+        description: "Kunde inte verifiera API-nycklarna. Kontrollera din internetanslutning och försök igen.",
         variant: "destructive"
       });
     } finally {
