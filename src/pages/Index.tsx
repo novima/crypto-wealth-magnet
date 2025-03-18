@@ -17,6 +17,7 @@ import StatCard from '@/components/StatCard';
 import ApiKeySetup from '@/components/ApiKeySetup';
 import LiveTrading from '@/components/LiveTrading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 const sampleTransactions = [
   {
@@ -59,6 +60,7 @@ const Index = () => {
     apiKey: string;
     apiSecret: string;
   } | null>(null);
+  const { toast } = useToast();
   
   const targetAmount = 1000;
   
@@ -66,9 +68,19 @@ const Index = () => {
     const savedKeys = localStorage.getItem('tradingApiKeys');
     if (savedKeys) {
       try {
-        setApiConfig(JSON.parse(savedKeys));
+        const parsedKeys = JSON.parse(savedKeys);
+        setApiConfig(parsedKeys);
+        toast({
+          title: "API-nycklar laddade",
+          description: "Dina sparade API-nycklar har hämtats.",
+        });
       } catch (e) {
         console.error('Failed to parse saved API keys');
+        toast({
+          variant: "destructive",
+          title: "Fel vid laddning av API-nycklar",
+          description: "Kunde inte läsa in dina sparade API-nycklar.",
+        });
       }
     }
   }, []);
@@ -83,6 +95,10 @@ const Index = () => {
   
   const handleApiKeySaved = (keys: { exchange: string; apiKey: string; apiSecret: string }) => {
     setApiConfig(keys);
+    toast({
+      title: "API-nycklar sparade",
+      description: "Din anslutning till börsen har konfigurerats.",
+    });
   };
   
   const containerVariants = {
@@ -129,16 +145,26 @@ const Index = () => {
           </motion.p>
         </motion.div>
         
-        {!apiConfig && (
-          <motion.div 
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="mb-8"
-          >
-            <ApiKeySetup onApiKeySaved={handleApiKeySaved} className="max-w-2xl mx-auto" />
-          </motion.div>
-        )}
+        <AnimatePresence mode="wait">
+          {!apiConfig && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="max-w-2xl mx-auto mb-8"
+            >
+              <ApiKeySetup 
+                onApiKeySaved={(keys) => {
+                  setApiConfig(keys);
+                  toast({
+                    title: "API-nycklar sparade",
+                    description: "Din anslutning till börsen har konfigurerats.",
+                  });
+                }} 
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {apiConfig && (
           <>
