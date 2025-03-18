@@ -1,9 +1,10 @@
-
-// Utility för att kommunicera med Binance API
 import CryptoJS from 'crypto-js';
 
+// Use a CORS proxy for development
+const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
+const BASE_URL = CORS_PROXY + 'https://api.binance.com';
+
 // Binance API endpoints
-const BASE_URL = 'https://api.binance.com';
 const TEST_CONNECTIVITY = '/api/v3/ping';
 const ACCOUNT_INFO = '/api/v3/account';
 const NEW_ORDER = '/api/v3/order';
@@ -20,10 +21,19 @@ const createSignature = (queryString: string, apiSecret: string): string => {
   return CryptoJS.HmacSHA256(queryString, apiSecret).toString(CryptoJS.enc.Hex);
 };
 
-// Förbättrad fetch-funktion med retry-logik
+// Förbättrad fetch-funktion med retry-logik och CORS proxy
 const fetchWithRetry = async (url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> => {
   try {
-    const response = await fetch(url, options);
+    // Add CORS headers
+    const corsOptions = {
+      ...options,
+      headers: {
+        ...options.headers,
+        'Origin': window.location.origin,
+      },
+    };
+    
+    const response = await fetch(url, corsOptions);
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
@@ -33,7 +43,7 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = MAX_R
     if (retries > 0) {
       console.log(`Retry attempt remaining: ${retries}. Retrying in ${RETRY_DELAY}ms...`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return fetchWithRetry(url, options, retries - 1);
+      return fetchWithRetry(url, corsOptions, retries - 1);
     }
     throw error;
   }
@@ -337,4 +347,3 @@ export const calculateVolatility = async (symbol: string, apiKey: string): Promi
     return 0;
   }
 };
-
