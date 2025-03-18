@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle, Shield, Key } from 'lucide-react';
+import { Shield, Key, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { validateApiKeys } from '@/utils/binanceApi';
@@ -15,15 +15,29 @@ interface ApiKeySetupProps {
 }
 
 const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) => {
-  const [apiKey, setApiKey] = useState<string>('jZg4QAd8uVrQmPkBdk9Jb0x7Ea1VR9HqyZCj4SK08Y7LAj6ZhnFnCngo6h2pVI9X');
-  const [apiSecret, setApiSecret] = useState<string>('Tm3Oi8VI7DohWt4rreHENy10OWY4q9HToMd7lOV8JJOMCma5UM5A2INlW9rJH0vP');
+  const [apiKey, setApiKey] = useState<string>('');
+  const [apiSecret, setApiSecret] = useState<string>('');
   const [isValidating, setIsValidating] = useState<boolean>(false);
   const [validationProgress, setValidationProgress] = useState<number>(0);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isValid, setIsValid] = useState<boolean>(false);
   const { toast } = useToast();
 
-  // Validate API keys whenever they change
+  // Ladda sparade nycklar från localStorage om de finns
+  useEffect(() => {
+    const savedKeys = localStorage.getItem('tradingApiKeys');
+    if (savedKeys) {
+      try {
+        const { apiKey: savedApiKey, apiSecret: savedApiSecret } = JSON.parse(savedKeys);
+        setApiKey(savedApiKey || '');
+        setApiSecret(savedApiSecret || '');
+      } catch (e) {
+        console.error('Kunde inte läsa sparade API-nycklar:', e);
+      }
+    }
+  }, []);
+
+  // Validera API-nycklar när de ändras
   useEffect(() => {
     const validateKeys = async () => {
       if (apiKey.length >= 10 && apiSecret.length >= 10) {
@@ -39,12 +53,10 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
           if (isValid) {
             setIsValid(true);
             setValidationError(null);
-            // Save to localStorage
-            localStorage.setItem('tradingApiKeys', JSON.stringify({
-              exchange: 'binance',
-              apiKey,
-              apiSecret
-            }));
+            toast({
+              title: "API-nycklar validerade",
+              description: "Dina nycklar är giltiga och redo att användas.",
+            });
           } else {
             setIsValid(false);
             setValidationError("API-nycklarna kunde inte verifieras. Kontrollera att du har angett rätt nycklar.");
@@ -56,11 +68,16 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
         } finally {
           setIsValidating(false);
         }
+      } else {
+        setIsValid(false);
+        setValidationError(null);
       }
     };
     
-    validateKeys();
-  }, [apiKey, apiSecret]);
+    // Använd en timeout för att inte validera vid varje knapptryck
+    const timeoutId = setTimeout(validateKeys, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [apiKey, apiSecret, toast]);
 
   const handleSaveKeys = () => {
     if (!isValid) {
@@ -71,6 +88,13 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
       });
       return;
     }
+
+    // Spara i localStorage
+    localStorage.setItem('tradingApiKeys', JSON.stringify({
+      exchange: 'binance',
+      apiKey,
+      apiSecret
+    }));
 
     onApiKeySaved({ 
       exchange: 'binance', 
@@ -88,7 +112,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
     <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Key size={20} />
+          <Key className="h-5 w-5" />
           Anslut till Binance
         </CardTitle>
         <CardDescription>
@@ -107,24 +131,46 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
 
         <div className="space-y-2">
           <label className="text-sm font-medium">API-nyckel</label>
-          <Input 
-            type="text" 
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="Ange din API-nyckel"
-            className="font-mono text-sm"
-          />
+          <div className="relative">
+            <Input 
+              type="text" 
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="Ange din API-nyckel"
+              className="font-mono text-sm pr-8"
+            />
+            {apiKey.length >= 10 && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                {isValid ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-500" />
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">API-hemlighet</label>
-          <Input 
-            type="password" 
-            value={apiSecret}
-            onChange={(e) => setApiSecret(e.target.value)}
-            placeholder="Ange din API-hemlighet"
-            className="font-mono text-sm"
-          />
+          <div className="relative">
+            <Input 
+              type="password" 
+              value={apiSecret}
+              onChange={(e) => setApiSecret(e.target.value)}
+              placeholder="Ange din API-hemlighet"
+              className="font-mono text-sm pr-8"
+            />
+            {apiSecret.length >= 10 && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                {isValid ? (
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-500" />
+                )}
+              </div>
+            )}
+          </div>
         </div>
         
         {isValidating && (
@@ -139,7 +185,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
         
         {validationError && !isValidating && (
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <XCircle className="h-4 w-4" />
             <AlertTitle>Valideringsfel</AlertTitle>
             <AlertDescription>{validationError}</AlertDescription>
           </Alert>
@@ -147,7 +193,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
         
         {isValid && !isValidating && (
           <Alert className="bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-400 border-green-200 dark:border-green-800/30">
-            <Shield className="h-4 w-4" />
+            <CheckCircle className="h-4 w-4" />
             <AlertTitle>API-nycklar validerade</AlertTitle>
             <AlertDescription>
               Dina API-nycklar har verifierats och är redo att användas.
