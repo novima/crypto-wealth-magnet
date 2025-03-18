@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -19,7 +18,6 @@ import ApiKeySetup from '@/components/ApiKeySetup';
 import LiveTrading from '@/components/LiveTrading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// Sample data
 const sampleTransactions = [
   {
     id: 't1',
@@ -64,7 +62,6 @@ const Index = () => {
   
   const targetAmount = 1000;
   
-  // Check if we have saved API keys
   useEffect(() => {
     const savedKeys = localStorage.getItem('tradingApiKeys');
     if (savedKeys) {
@@ -88,7 +85,6 @@ const Index = () => {
     setApiConfig(keys);
   };
   
-  // Container animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -133,167 +129,176 @@ const Index = () => {
           </motion.p>
         </motion.div>
         
-        {/* Key metrics */}
-        <motion.div 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
-        >
-          <motion.div variants={itemVariants}>
-            <StatCard
-              title="Kontobalans"
-              value={`$${accountBalance.toLocaleString(undefined, { 
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}`}
-              icon={DollarSign}
-              description="Nuvarande handelskapital"
-            />
+        {!apiConfig && (
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="mb-8"
+          >
+            <ApiKeySetup onApiKeySaved={handleApiKeySaved} className="max-w-2xl mx-auto" />
           </motion.div>
-          
-          <motion.div variants={itemVariants}>
-            <StatCard
-              title="Daglig vinst"
-              value={`$${dailyProfit.toLocaleString(undefined, { 
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}`}
-              icon={TrendingUp}
-              trend={
-                dailyProfit !== 0 
-                  ? { value: profitPercentage, isPositive: dailyProfit > 0 } 
-                  : undefined
-              }
-            />
-          </motion.div>
-          
-          <motion.div variants={itemVariants}>
-            <StatCard
-              title="Avkastning"
-              value={`${profitPercentage.toFixed(2)}%`}
-              icon={Percent}
-              description="Avkastning på investering"
-              trend={
-                profitPercentage !== 0 
-                  ? { value: profitPercentage, isPositive: profitPercentage > 0 } 
-                  : undefined
-              }
-            />
-          </motion.div>
-        </motion.div>
+        )}
         
-        {/* Main content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column */}
-          <div className="lg:col-span-2 space-y-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+        {apiConfig && (
+          <>
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"
             >
-              <Tabs defaultValue={apiConfig ? "live" : "simulation"} className="w-full">
-                <TabsList className="w-full grid grid-cols-2 mb-4">
-                  <TabsTrigger value="simulation">Simulering</TabsTrigger>
-                  <TabsTrigger value="live">Riktiga pengar</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="simulation" className="mt-0">
-                  <TradingSimulation 
-                    initialAmount={10} 
-                    targetAmount={1000}
-                    onComplete={handleSimulationComplete}
-                    className="h-full"
-                  />
-                </TabsContent>
-                
-                <TabsContent value="live" className="mt-0">
-                  {!apiConfig ? (
-                    <ApiKeySetup onApiKeySaved={handleApiKeySaved} />
-                  ) : (
-                    <LiveTrading 
-                      apiConfig={apiConfig}
-                      initialAmount={10}
-                      targetAmount={1000}
-                      onComplete={handleSimulationComplete}
-                    />
-                  )}
-                </TabsContent>
-              </Tabs>
-            </motion.div>
-          </div>
-          
-          {/* Right column */}
-          <div className="space-y-6">
-            {/* Progress towards goal */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="p-5 rounded-xl border bg-card"
-            >
-              <h2 className="text-lg font-medium mb-4">Progress to Goal</h2>
-              
-              <div className="flex justify-center">
-                <ProgressRing progress={progress} size={160} strokeWidth={6}>
-                  <div className="text-center">
-                    <div className="text-3xl font-medium tracking-tight">
-                      {(progress * 100).toFixed(1)}%
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      of daily goal
-                    </div>
-                  </div>
-                </ProgressRing>
-              </div>
-              
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                <ValueDisplay 
-                  label="Current" 
-                  value={accountBalance} 
-                  prefix="$" 
+              <motion.div variants={itemVariants}>
+                <StatCard
+                  title="Kontobalans"
+                  value={`$${accountBalance.toLocaleString(undefined, { 
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}`}
+                  icon={DollarSign}
+                  description="Nuvarande handelskapital"
                 />
-                <ValueDisplay 
-                  label="Target" 
-                  value={1000} 
-                  prefix="$" 
-                  labelClassName="text-right"
-                  valueClassName="text-right"
+              </motion.div>
+              
+              <motion.div variants={itemVariants}>
+                <StatCard
+                  title="Daglig vinst"
+                  value={`$${dailyProfit.toLocaleString(undefined, { 
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}`}
+                  icon={TrendingUp}
+                  trend={
+                    dailyProfit !== 0 
+                      ? { value: profitPercentage, isPositive: dailyProfit > 0 } 
+                      : undefined
+                  }
                 />
-              </div>
+              </motion.div>
+              
+              <motion.div variants={itemVariants}>
+                <StatCard
+                  title="Avkastning"
+                  value={`${profitPercentage.toFixed(2)}%`}
+                  icon={Percent}
+                  description="Avkastning på investering"
+                  trend={
+                    profitPercentage !== 0 
+                      ? { value: profitPercentage, isPositive: profitPercentage > 0 } 
+                      : undefined
+                  }
+                />
+              </motion.div>
             </motion.div>
             
-            {/* Recent transactions */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-              className="p-5 rounded-xl border bg-card"
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium">Recent Transactions</h2>
-                <button className="text-xs text-primary hover:text-primary/80 font-medium">
-                  View All
-                </button>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2 space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                >
+                  <Tabs defaultValue={apiConfig ? "live" : "simulation"} className="w-full">
+                    <TabsList className="w-full grid grid-cols-2 mb-4">
+                      <TabsTrigger value="simulation">Simulering</TabsTrigger>
+                      <TabsTrigger value="live">Riktiga pengar</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="simulation" className="mt-0">
+                      <TradingSimulation 
+                        initialAmount={10} 
+                        targetAmount={1000}
+                        onComplete={handleSimulationComplete}
+                        className="h-full"
+                      />
+                    </TabsContent>
+                    
+                    <TabsContent value="live" className="mt-0">
+                      {!apiConfig ? (
+                        <ApiKeySetup onApiKeySaved={handleApiKeySaved} />
+                      ) : (
+                        <LiveTrading 
+                          apiConfig={apiConfig}
+                          initialAmount={10}
+                          targetAmount={1000}
+                          onComplete={handleSimulationComplete}
+                        />
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </motion.div>
               </div>
               
-              <div className="space-y-3">
-                {transactions.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground text-sm">
-                    No transactions yet
+              <div className="space-y-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="p-5 rounded-xl border bg-card"
+                >
+                  <h2 className="text-lg font-medium mb-4">Progress to Goal</h2>
+                  
+                  <div className="flex justify-center">
+                    <ProgressRing progress={progress} size={160} strokeWidth={6}>
+                      <div className="text-center">
+                        <div className="text-3xl font-medium tracking-tight">
+                          {(progress * 100).toFixed(1)}%
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          of daily goal
+                        </div>
+                      </div>
+                    </ProgressRing>
                   </div>
-                ) : (
-                  transactions.slice(0, 3).map((transaction) => (
-                    <TransactionCard 
-                      key={transaction.id} 
-                      transaction={transaction} 
+                  
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <ValueDisplay 
+                      label="Current" 
+                      value={accountBalance} 
+                      prefix="$" 
                     />
-                  ))
-                )}
+                    <ValueDisplay 
+                      label="Target" 
+                      value={1000} 
+                      prefix="$" 
+                      labelClassName="text-right"
+                      valueClassName="text-right"
+                    />
+                  </div>
+                </motion.div>
+                
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.4 }}
+                  className="p-5 rounded-xl border bg-card"
+                >
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-medium">Recent Transactions</h2>
+                    <button className="text-xs text-primary hover:text-primary/80 font-medium">
+                      View All
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {transactions.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground text-sm">
+                        No transactions yet
+                      </div>
+                    ) : (
+                      transactions.slice(0, 3).map((transaction) => (
+                        <TransactionCard 
+                          key={transaction.id} 
+                          transaction={transaction} 
+                        />
+                      ))
+                    )}
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   );
