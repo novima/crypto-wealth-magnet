@@ -24,7 +24,6 @@ const createSignature = (queryString: string, apiSecret: string): string => {
 // Förbättrad fetch-funktion med retry-logik och CORS proxy
 const fetchWithRetry = async (url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> => {
   try {
-    // Add CORS headers
     const corsOptions = {
       ...options,
       headers: {
@@ -43,7 +42,7 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = MAX_R
     if (retries > 0) {
       console.log(`Retry attempt remaining: ${retries}. Retrying in ${RETRY_DELAY}ms...`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return fetchWithRetry(url, corsOptions, retries - 1);
+      return fetchWithRetry(url, options, retries - 1);
     }
     throw error;
   }
