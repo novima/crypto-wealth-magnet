@@ -53,7 +53,9 @@ export const useTradeExecution = (
       const success = await transferProfitToBinanceAccount(amount);
       
       if (success) {
-        setTotalProfitReserved(prev => prev + amount);
+        // Here's the fix: we need to pass a direct value to setTotalProfitReserved
+        // instead of using a function updater
+        setTotalProfitReserved(totalProfitReserved + amount);
         
         toast({
           title: "Vinst överförd till ditt konto",
