@@ -1,8 +1,10 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import ValueDisplay from './ValueDisplay';
 
 interface TradingStatusProps {
@@ -10,6 +12,7 @@ interface TradingStatusProps {
   targetAmount: number;
   dayCount: number;
   totalProfitReserved: number;
+  onRefreshBalance?: () => void;
 }
 
 const TradingStatus: React.FC<TradingStatusProps> = ({
@@ -17,6 +20,7 @@ const TradingStatus: React.FC<TradingStatusProps> = ({
   targetAmount,
   dayCount,
   totalProfitReserved,
+  onRefreshBalance
 }) => {
   const progress = Math.min((currentBalance / targetAmount) * 100, 100);
 
@@ -35,13 +39,26 @@ const TradingStatus: React.FC<TradingStatusProps> = ({
         animate={{ opacity: 1 }}
         className="flex justify-between items-center"
       >
-        <div>
-          <ValueDisplay
-            label="Nuvarande balans"
-            value={currentBalance}
-            prefix="$"
-            decimals={2}
-          />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <ValueDisplay
+              label="Nuvarande balans"
+              value={currentBalance}
+              prefix="$"
+              decimals={2}
+            />
+            {onRefreshBalance && (
+              <Button 
+                onClick={onRefreshBalance} 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 mt-1"
+                title="Uppdatera saldo från Binance"
+              >
+                <RefreshCw className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
           <div className="text-xs text-muted-foreground mt-1">
             Dag {dayCount}
           </div>

@@ -25,6 +25,7 @@ export const useTrading = (
     isInitializing,
     lastFailedAttempt, setLastFailedAttempt,
     consecutiveFailures, setConsecutiveFailures,
+    updateActualBalance,
     toast
   } = tradingState;
 
@@ -35,7 +36,8 @@ export const useTrading = (
   const {
     selectMarket,
     reserveProfitToBinanceAccount,
-    executeSingleTrade
+    executeSingleTrade,
+    fetchActualBalance
   } = useTradeExecution(
     apiConfig,
     availableMarkets,
@@ -46,6 +48,23 @@ export const useTrading = (
     setTradeHistory,
     toast
   );
+
+  // Periodically update balance from Binance
+  useEffect(() => {
+    if (!apiConfig.apiKey || !apiConfig.apiSecret) return;
+    
+    // Update balance initially
+    updateActualBalance();
+    
+    // Set up interval to update balance every 30 seconds
+    const balanceUpdateInterval = setInterval(() => {
+      if (!isTrading) {
+        updateActualBalance();
+      }
+    }, 30000);
+    
+    return () => clearInterval(balanceUpdateInterval);
+  }, [apiConfig.apiKey, apiConfig.apiSecret]);
 
   // Execute a trade
   const executeTrade = useCallback(async () => {
@@ -74,6 +93,12 @@ export const useTrading = (
     setIsTrading(true);
     
     try {
+      // Get latest balance before trading
+      const actualBalance = await fetchActualBalance();
+      if (actualBalance > 0) {
+        setCurrentBalance(actualBalance);
+      }
+      
       const market = selectMarket();
       const operation: 'buy' | 'sell' = Math.random() > 0.25 ? 'buy' : 'sell';
       
@@ -81,7 +106,14 @@ export const useTrading = (
       
       try {
         const tradeResult = await executeSingleTrade(market, operation);
-        setCurrentBalance(tradeResult.newBalance);
+        
+        // Get updated balance after trade
+        const newActualBalance = await fetchActualBalance();
+        if (newActualBalance > 0) {
+          setCurrentBalance(newActualBalance);
+        } else {
+          setCurrentBalance(tradeResult.newBalance);
+        }
         
         setConsecutiveFailures(0);
         setLastFailedAttempt(null);
@@ -93,7 +125,7 @@ export const useTrading = (
           market,
           amount: tradeResult.tradedAmount,
           success: tradeResult.success,
-          balanceAfter: tradeResult.newBalance,
+          balanceAfter: newActualBalance > 0 ? newActualBalance : tradeResult.newBalance,
           message: tradeResult.success 
             ? `Lyckad ${operation === 'buy' ? 'köp' : 'sälj'} order på ${market}`
             : `${operation === 'buy' ? 'Köp' : 'Sälj'} på ${market} genomförd med mindre än optimal avkastning`
@@ -105,17 +137,19 @@ export const useTrading = (
         if (!tradeResult.success) {
           toast({
             title: "Handel genomförd med varning",
-            description: `${newTrade.message}. Ny balans: $${tradeResult.newBalance.toFixed(2)}`,
+            description: `${newTrade.message}. Ny balans: $${newTrade.balanceAfter.toFixed(2)}`,
             variant: "destructive"
           });
         } else if (tradeCount % 5 === 0) {
           toast({
             title: "Handel framgångsrik",
-            description: `${newTrade.message}. Ny balans: $${tradeResult.newBalance.toFixed(2)}`,
+            description: `${newTrade.message}. Ny balans: $${newTrade.balanceAfter.toFixed(2)}`,
           });
         }
         
-        if (tradeResult.newBalance >= targetAmount && !dailyTargetReached) {
+        const currentActualBalance = newActualBalance > 0 ? newActualBalance : tradeResult.newBalance;
+        
+        if (currentActualBalance >= targetAmount && !dailyTargetReached) {
           setDailyTargetReached(true);
           
           toast({
@@ -124,8 +158,8 @@ export const useTrading = (
             variant: "default"
           });
           
-          const reserveAmount = tradeResult.newBalance * 0.7;
-          const profitAmount = tradeResult.newBalance * 0.3;
+          const reserveAmount = currentActualBalance * 0.7;
+          const profitAmount = currentActualBalance * 0.3;
           
           const transferSuccessful = await reserveProfitToBinanceAccount(profitAmount);
           
@@ -149,7 +183,7 @@ export const useTrading = (
           }
           
           if (onComplete) {
-            onComplete(tradeResult.newBalance);
+            onComplete(currentActualBalance);
           }
         }
       } catch (orderError) {
@@ -201,10 +235,29 @@ export const useTrading = (
     lastFailedAttempt, currentBalance, tradeCount, dailyTargetReached,
     dayCount, targetAmount, initialAmount, onComplete,
     selectMarket, executeSingleTrade, reserveProfitToBinanceAccount,
+    fetchActualBalance, updateActualBalance,
     setCurrentBalance, setConsecutiveFailures, setLastFailedAttempt,
     setTradeHistory, setTradeCount, setDailyTargetReached, setDayCount,
     toast
   ]);
+
+  // Add a function to manually refresh the balance
+  const refreshBalance = async () => {
+    if (isTrading) {
+      toast({
+        title: "Kan inte uppdatera saldo",
+        description: "Vänta tills pågående handel är klar innan du uppdaterar saldo.",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Uppdaterar saldo...",
+      description: "Hämtar ditt aktuella saldo från Binance.",
+    });
+    
+    await updateActualBalance();
+  };
 
   // Automated trading on interval
   useEffect(() => {
@@ -237,6 +290,7 @@ export const useTrading = (
     ...tradingState,
     executeTrade,
     handleSpeedChange,
+    refreshBalance,
     progress: Math.min((currentBalance / targetAmount) * 100, 100)
   };
 };

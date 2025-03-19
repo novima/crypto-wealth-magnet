@@ -5,7 +5,8 @@ import {
   getOrderBook, 
   analyzeMarketDepth, 
   calculateOptimalQuantity, 
-  transferProfitToBinanceAccount
+  transferProfitToBinanceAccount,
+  getAccountBalance
 } from '@/utils/binanceApi';
 import { ApiConfig, Trade } from './useTradingState';
 
@@ -147,9 +148,37 @@ export const useTradeExecution = (
     };
   };
 
+  // Fetch actual Binance balance
+  const fetchActualBalance = async (): Promise<number> => {
+    try {
+      if (!apiConfig.apiKey || !apiConfig.apiSecret) {
+        throw new Error("API-konfiguration saknas");
+      }
+      
+      const balances = await getAccountBalance(apiConfig.apiKey, apiConfig.apiSecret);
+      const usdtBalance = balances.find((b: any) => b.asset === 'USDT');
+      
+      if (usdtBalance) {
+        const freeBalance = parseFloat(usdtBalance.free);
+        return freeBalance;
+      }
+      
+      throw new Error("Kunde inte hitta USDT-balans på kontot");
+    } catch (error) {
+      console.error("Fel vid hämtning av balans:", error);
+      toast({
+        title: "Kunde inte hämta saldo",
+        description: "Ett fel uppstod vid anslutning till Binance. Kontrollera dina API-nycklar.",
+        variant: "destructive"
+      });
+      return currentBalance; // Return current balance as fallback
+    }
+  };
+
   return {
     selectMarket,
     reserveProfitToBinanceAccount,
-    executeSingleTrade
+    executeSingleTrade,
+    fetchActualBalance
   };
 };

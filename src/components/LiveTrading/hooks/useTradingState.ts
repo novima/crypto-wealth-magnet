@@ -45,7 +45,7 @@ export const useTradingState = (
   const [consecutiveFailures, setConsecutiveFailures] = useState<number>(0);
   const { toast } = useToast();
 
-  // Initialize trading state
+  // Initialize trading state and fetch real balance from Binance
   useEffect(() => {
     const initializeTrading = async () => {
       if (!apiConfig.apiKey || !apiConfig.apiSecret) {
@@ -64,17 +64,9 @@ export const useTradingState = (
         const tradablePairs = await getTradableUsdtPairs(apiConfig.apiKey);
         setAvailableMarkets(tradablePairs);
         
-        const balances = await getAccountBalance(apiConfig.apiKey, apiConfig.apiSecret);
-        const usdtBalance = balances.find((b: any) => b.asset === 'USDT');
+        // Fetch actual Binance balance
+        await updateActualBalance();
         
-        if (usdtBalance) {
-          const freeBalance = parseFloat(usdtBalance.free);
-          setCurrentBalance(freeBalance);
-          toast({
-            title: "Saldo hämtat",
-            description: `Ditt tillgängliga saldo är ${freeBalance.toFixed(2)} USDT.`,
-          });
-        }
       } catch (error) {
         console.error("Initialiseringsfel:", error);
         toast({
@@ -82,13 +74,38 @@ export const useTradingState = (
           description: "Ett fel uppstod vid anslutning till Binance. Kontrollera dina API-nycklar och internetanslutning.",
           variant: "destructive"
         });
+        // Fallback to initial amount if fetching fails
+        setCurrentBalance(initialAmount);
       } finally {
         setIsInitializing(false);
       }
     };
     
     initializeTrading();
-  }, [apiConfig.apiKey, apiConfig.apiSecret, toast]);
+  }, [apiConfig.apiKey, apiConfig.apiSecret, toast, initialAmount]);
+
+  // Function to update balance from Binance
+  const updateActualBalance = async () => {
+    try {
+      if (!apiConfig.apiKey || !apiConfig.apiSecret) {
+        return;
+      }
+      
+      const balances = await getAccountBalance(apiConfig.apiKey, apiConfig.apiSecret);
+      const usdtBalance = balances.find((b: any) => b.asset === 'USDT');
+      
+      if (usdtBalance) {
+        const freeBalance = parseFloat(usdtBalance.free);
+        setCurrentBalance(freeBalance);
+        toast({
+          title: "Saldo uppdaterat",
+          description: `Ditt tillgängliga saldo är ${freeBalance.toFixed(2)} USDT.`,
+        });
+      }
+    } catch (error) {
+      console.error("Fel vid hämtning av saldo:", error);
+    }
+  };
 
   return {
     currentBalance,
@@ -121,6 +138,7 @@ export const useTradingState = (
     setLastFailedAttempt,
     consecutiveFailures,
     setConsecutiveFailures,
+    updateActualBalance,
     toast
   };
 };

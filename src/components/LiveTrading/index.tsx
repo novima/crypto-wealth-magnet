@@ -1,11 +1,11 @@
 
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import TradingHeader from '@/components/TradingHeader';
-import TradingStatus from '@/components/TradingStatus';
-import TradingControls from '@/components/TradingControls';
-import TradeHistory from '@/components/TradeHistory';
-import TradingComplete from '@/components/TradingComplete';
+import TradingHeader from '../TradingHeader';
+import TradingStatus from '../TradingStatus';
+import TradingControls from '../TradingControls';
+import TradeHistory from '../TradeHistory';
+import TradingComplete from '../TradingComplete';
 import { useTrading } from './hooks/useTrading';
 
 interface LiveTradingProps {
@@ -29,17 +29,18 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
 }) => {
   const {
     currentBalance,
-    autoTradeEnabled,
     tradeHistory,
-    dailyTargetReached,
     dayCount,
     tradeSpeed,
     totalProfitReserved,
-    isInitializing,
+    autoTradeEnabled,
+    dailyTargetReached,
     handleSpeedChange,
     setAutoTradeEnabled,
-    progress
+    refreshBalance
   } = useTrading(apiConfig, initialAmount, targetAmount, onComplete);
+
+  const progress = Math.min((currentBalance / targetAmount) * 100, 100);
 
   return (
     <Card className={className}>
@@ -51,6 +52,7 @@ const LiveTrading: React.FC<LiveTradingProps> = ({
           targetAmount={targetAmount}
           dayCount={dayCount}
           totalProfitReserved={totalProfitReserved}
+          onRefreshBalance={refreshBalance}
         />
         
         <TradingControls
