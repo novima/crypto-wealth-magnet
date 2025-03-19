@@ -92,18 +92,29 @@ export const useTradingState = (
       }
       
       const balances = await getAccountBalance(apiConfig.apiKey, apiConfig.apiSecret);
+      console.log("Hämtade balans från Binance:", balances);
+      
       const usdtBalance = balances.find((b: any) => b.asset === 'USDT');
       
       if (usdtBalance) {
         const freeBalance = parseFloat(usdtBalance.free);
+        console.log("Uppdaterar saldo till:", freeBalance);
         setCurrentBalance(freeBalance);
         toast({
           title: "Saldo uppdaterat",
           description: `Ditt tillgängliga saldo är ${freeBalance.toFixed(2)} USDT.`,
         });
+        return freeBalance;
       }
+      return null;
     } catch (error) {
       console.error("Fel vid hämtning av saldo:", error);
+      toast({
+        title: "Kunde inte hämta saldo",
+        description: "Ett fel uppstod vid hämtning av ditt Binance-saldo.",
+        variant: "destructive"
+      });
+      return null;
     }
   };
 
