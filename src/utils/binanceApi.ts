@@ -1,6 +1,6 @@
 import CryptoJS from 'crypto-js';
 
-// Use a CORS proxy for development
+// CORS-proxy konfiguration
 const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 const BASE_URL = CORS_PROXY + 'https://api.binance.com';
 
@@ -21,6 +21,17 @@ const createSignature = (queryString: string, apiSecret: string): string => {
   return CryptoJS.HmacSHA256(queryString, apiSecret).toString(CryptoJS.enc.Hex);
 };
 
+// Kontrollera om användaren behöver aktivera CORS-proxyn
+export const needsCorsActivation = async (): Promise<boolean> => {
+  try {
+    const response = await fetch(`${CORS_PROXY}https://api.binance.com/api/v3/ping`);
+    return response.status === 403 && (await response.text()).includes('/corsdemo');
+  } catch (error) {
+    console.error('Error checking CORS proxy:', error);
+    return true;
+  }
+};
+
 // Förbättrad fetch-funktion med retry-logik och CORS proxy
 const fetchWithRetry = async (url: string, options: RequestInit, retries = MAX_RETRIES): Promise<Response> => {
   try {
@@ -33,12 +44,26 @@ const fetchWithRetry = async (url: string, options: RequestInit, retries = MAX_R
     };
     
     const response = await fetch(url, corsOptions);
+    
+    // Särskild hantering för CORS-proxy fel
+    if (response.status === 403) {
+      const text = await response.text();
+      if (text.includes('/corsdemo')) {
+        throw new Error('CORS_PROXY_NEEDS_ACTIVATION');
+      }
+    }
+    
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
+    
     return response;
   } catch (error) {
+    if (error instanceof Error && error.message === 'CORS_PROXY_NEEDS_ACTIVATION') {
+      throw error; // Vi hanterar detta fel specifikt högre upp
+    }
+    
     if (retries > 0) {
       console.log(`Retry attempt remaining: ${retries}. Retrying in ${RETRY_DELAY}ms...`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
@@ -55,6 +80,11 @@ export const testConnectivity = async (): Promise<boolean> => {
     return response.ok;
   } catch (error) {
     console.error('Binance API test connectivity error:', error);
+    
+    if (error instanceof Error && error.message === 'CORS_PROXY_NEEDS_ACTIVATION') {
+      return false;
+    }
+    
     return false;
   }
 };
@@ -68,7 +98,14 @@ export const validateApiKeys = async (apiKey: string, apiSecret: string): Promis
       return false;
     }
 
-    // Först testa grundläggande anslutning
+    // Först kontrollera om CORS-proxy behöver aktiveras
+    const corsNeedsActivation = await needsCorsActivation();
+    if (corsNeedsActivation) {
+      console.error('CORS proxy needs activation');
+      return false;
+    }
+
+    // Sedan testa grundläggande anslutning
     const isConnected = await testConnectivity();
     if (!isConnected) {
       console.error('Failed to connect to Binance API');
@@ -95,6 +132,11 @@ export const validateApiKeys = async (apiKey: string, apiSecret: string): Promis
     return true;
   } catch (error) {
     console.error('Binance API validation error:', error);
+    
+    if (error instanceof Error && error.message === 'CORS_PROXY_NEEDS_ACTIVATION') {
+      throw new Error('CORS_PROXY_NEEDS_ACTIVATION');
+    }
+    
     return false;
   }
 };
@@ -113,6 +155,11 @@ export const getCurrentPrice = async (symbol: string, apiKey: string): Promise<n
     return parseFloat(data.price);
   } catch (error) {
     console.error(`Failed to get current price for ${symbol}:`, error);
+    
+    if (error instanceof Error && error.message === 'CORS_PROXY_NEEDS_ACTIVATION') {
+      throw new Error('CORS_PROXY_NEEDS_ACTIVATION');
+    }
+    
     throw error;
   }
 };
@@ -130,6 +177,11 @@ export const getOrderBook = async (symbol: string, limit: number = 20, apiKey: s
     return await response.json();
   } catch (error) {
     console.error(`Failed to get order book for ${symbol}:`, error);
+    
+    if (error instanceof Error && error.message === 'CORS_PROXY_NEEDS_ACTIVATION') {
+      throw new Error('CORS_PROXY_NEEDS_ACTIVATION');
+    }
+    
     throw error;
   }
 };
@@ -165,6 +217,11 @@ export const getExchangeInfo = async (apiKey: string): Promise<any> => {
     return await response.json();
   } catch (error) {
     console.error('Failed to get exchange info:', error);
+    
+    if (error instanceof Error && error.message === 'CORS_PROXY_NEEDS_ACTIVATION') {
+      throw new Error('CORS_PROXY_NEEDS_ACTIVATION');
+    }
+    
     throw error;
   }
 };
@@ -284,6 +341,11 @@ export const getAccountBalance = async (apiKey: string, apiSecret: string): Prom
     return data.balances;
   } catch (error) {
     console.error('Failed to get account balance:', error);
+    
+    if (error instanceof Error && error.message === 'CORS_PROXY_NEEDS_ACTIVATION') {
+      throw new Error('CORS_PROXY_NEEDS_ACTIVATION');
+    }
+    
     throw error;
   }
 };

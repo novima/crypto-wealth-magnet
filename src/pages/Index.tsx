@@ -18,6 +18,7 @@ import ApiKeySetup from '@/components/ApiKeySetup';
 import LiveTrading from '@/components/LiveTrading';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 const sampleTransactions = [
   {
@@ -122,6 +123,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Toaster />
       <Header />
       
       <main className="container px-4 py-8 mx-auto">

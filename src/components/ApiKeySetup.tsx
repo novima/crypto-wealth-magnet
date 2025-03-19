@@ -2,12 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Shield, Key, CheckCircle, XCircle } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
+import { Shield, Key, CheckCircle, XCircle, ExternalLink, Info } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
-import { validateApiKeys } from '@/utils/binanceApi';
+import { validateApiKeys, needsCorsActivation } from '@/utils/binanceApi';
 
 interface ApiKeySetupProps {
   onApiKeySaved: (keys: { exchange: string; apiKey: string; apiSecret: string }) => void;
@@ -21,7 +21,32 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
   const [validationProgress, setValidationProgress] = useState<number>(0);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isValid, setIsValid] = useState<boolean>(false);
+  const [needsCorsActivationState, setNeedsCorsActivationState] = useState<boolean>(false);
   const { toast } = useToast();
+
+  // Kontrollera om CORS-proxy behöver aktiveras
+  useEffect(() => {
+    const checkCorsProxy = async () => {
+      try {
+        const needsActivation = await needsCorsActivation();
+        setNeedsCorsActivationState(needsActivation);
+        
+        if (needsActivation) {
+          setValidationError("CORS-proxy behöver aktiveras. Klicka på länken nedan och följ instruktionerna.");
+          toast({
+            title: "CORS-proxy behöver aktiveras",
+            description: "API-anrop till Binance kräver en aktiverad CORS-proxy. Klicka på knappen i formuläret.",
+            variant: "destructive"
+          });
+        }
+      } catch (e) {
+        console.error('Error checking CORS proxy:', e);
+        setNeedsCorsActivationState(true);
+      }
+    };
+    
+    checkCorsProxy();
+  }, [toast]);
 
   // Ladda sparade nycklar från localStorage om de finns
   useEffect(() => {
@@ -40,7 +65,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
   // Validera API-nycklar när de ändras
   useEffect(() => {
     const validateKeys = async () => {
-      if (apiKey.length >= 10 && apiSecret.length >= 10) {
+      if (apiKey.length >= 10 && apiSecret.length >= 10 && !needsCorsActivationState) {
         setIsValidating(true);
         setValidationProgress(0);
         setValidationError(null);
@@ -59,25 +84,37 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
             });
           } else {
             setIsValid(false);
-            setValidationError("API-nycklarna kunde inte verifieras. Kontrollera att du har angett rätt nycklar.");
+            setValidationError("API-nycklarna kunde inte verifieras. Kontrollera att du har angett rätt nycklar och att IP-begränsningar tillåter din nuvarande IP.");
           }
         } catch (error) {
           console.error("API-valideringsfel:", error);
-          setIsValid(false);
-          setValidationError("Ett tekniskt fel uppstod vid validering av nycklarna");
+          
+          if (error instanceof Error && error.message === 'CORS_PROXY_NEEDS_ACTIVATION') {
+            setNeedsCorsActivationState(true);
+            setValidationError("CORS-proxy behöver aktiveras. Klicka på länken nedan och följ instruktionerna.");
+          } else {
+            setIsValid(false);
+            setValidationError("Ett tekniskt fel uppstod vid validering av nycklarna");
+          }
         } finally {
           setIsValidating(false);
         }
       } else {
         setIsValid(false);
-        setValidationError(null);
+        if (needsCorsActivationState) {
+          setValidationError("CORS-proxy behöver aktiveras. Klicka på länken nedan och följ instruktionerna.");
+        } else if (apiKey.length > 0 || apiSecret.length > 0) {
+          setValidationError("API-nycklar är för korta. Varje nyckel måste vara minst 10 tecken.");
+        } else {
+          setValidationError(null);
+        }
       }
     };
     
     // Använd en timeout för att inte validera vid varje knapptryck
     const timeoutId = setTimeout(validateKeys, 1000);
     return () => clearTimeout(timeoutId);
-  }, [apiKey, apiSecret, toast]);
+  }, [apiKey, apiSecret, toast, needsCorsActivationState]);
 
   const handleSaveKeys = () => {
     if (!isValid) {
@@ -108,6 +145,14 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
     });
   };
 
+  const handleActivateCorsProxy = () => {
+    window.open('https://cors-anywhere.herokuapp.com/corsdemo', '_blank');
+    toast({
+      title: "CORS-proxy aktivering",
+      description: "En ny flik har öppnats. Klicka på 'Request temporary access to the demo server' och återvänd sedan hit.",
+    });
+  };
+
   return (
     <Card className={className}>
       <CardHeader>
@@ -121,6 +166,26 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {needsCorsActivationState && (
+          <Alert className="bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400 border-amber-200 dark:border-amber-800/30">
+            <Info className="h-4 w-4" />
+            <AlertTitle>CORS-proxy måste aktiveras</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>För att kunna använda Binance API behöver du aktivera CORS-proxyn:</p>
+              <Button 
+                variant="outline" 
+                className="flex items-center gap-2 mt-2"
+                onClick={handleActivateCorsProxy}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Aktivera CORS-proxy
+              </Button>
+              <p className="text-xs">Efter aktivering, återvänd hit och fortsätt med API-nycklarna.</p>
+              <p className="text-xs">När du skapar API-nycklar på Binance, lägg till din nuvarande IP-adress: <strong>{window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname}</strong></p>
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Alert className="bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400 border-blue-200 dark:border-blue-800/30">
           <Shield className="h-4 w-4" />
           <AlertTitle>Säker anslutning</AlertTitle>
@@ -138,6 +203,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
               onChange={(e) => setApiKey(e.target.value)}
               placeholder="Ange din API-nyckel"
               className="font-mono text-sm pr-8"
+              disabled={needsCorsActivationState}
             />
             {apiKey.length >= 10 && (
               <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -160,6 +226,7 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
               onChange={(e) => setApiSecret(e.target.value)}
               placeholder="Ange din API-hemlighet"
               className="font-mono text-sm pr-8"
+              disabled={needsCorsActivationState}
             />
             {apiSecret.length >= 10 && (
               <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -200,15 +267,17 @@ const ApiKeySetup: React.FC<ApiKeySetupProps> = ({ onApiKeySaved, className }) =
             </AlertDescription>
           </Alert>
         )}
+      </CardContent>
 
+      <CardFooter>
         <Button 
           onClick={handleSaveKeys} 
-          disabled={!isValid || isValidating}
-          className="w-full mt-4"
+          disabled={!isValid || isValidating || needsCorsActivationState}
+          className="w-full"
         >
           {isValidating ? "Validerar..." : "Spara API-nycklar"}
         </Button>
-      </CardContent>
+      </CardFooter>
     </Card>
   );
 };
